@@ -1,5 +1,25 @@
+require("dotenv").config();
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+
+const verifyToken = (req, res, next) => {
+    const header = req.headers;
+    const token = header.authorization;
+    if(!token) {
+        res.status(401).json({message: "No token"});
+    }
+    const decodedToken = jwt.verify(token, process.env.SECRET_KEY);
+    if(decodedToken.userName) {
+        req.user = decodedToken;
+        next();
+    }
+    else {
+        res.status(401).json({message: "Unauthorized"});
+    }
+};
+
+router.use(verifyToken);
 
 let books = [
   {
@@ -42,6 +62,10 @@ router.get("/:id", (req, res) => {
 });
 
 router.post("/", (req, res)=> {
+    console.log(req.user);
+    if(!req.user.role || req.user.role != 'ADMIN') {
+        return res.status(403).json({message: "Forbidden"});
+    }
     const newBook = req.body;
     newBook.id = books.length + 1;
     books[books.length] = newBook;
