@@ -19,8 +19,6 @@ const verifyToken = (req, res, next) => {
     }
 };
 
-router.use(verifyToken);
-
 // let books = [
 //   {
 //     "id": 1,
@@ -53,9 +51,21 @@ router.use(verifyToken);
 // ];
 
 router.get("/", async(req, res) => {
-    const books = await Books.find(); 
-    res.send(books);
+    const { page = 1, limit = 3, name, genre, author } = req.query;
+    let filter = {};
+    if (name) filter.name = { $regex: name, $options: 'i' };
+    if (genre) filter.genre = { $regex: genre, $options: 'i' };
+    if (author) filter.author = { $regex: author, $options: 'i' };
+    const books = await Books.find(filter).limit(parseInt(limit)).skip((page-1)*limit).exec();
+    const count = await Books.countDocuments(filter); 
+    res.json({
+        totalItems: count,
+        totalPages: Math.ceil(count/limit),
+        currentPage: parseInt(page),
+        books
+    });
 });
+router.use(verifyToken);
 
 router.get("/:id", async(req, res) => {
     const id = req.params.id;
